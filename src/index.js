@@ -6,19 +6,17 @@ function init() {
   const image = document.querySelector("#image");
 
   fetchCharacters(characterBar, detailedInfo, image);
-  attachVoteFormEvents();
-  attachResetBtnEvents();
+  attachEventListeners();
 }
 
 function fetchCharacters(characterBar, detailedInfo, image) {
   fetch("http://localhost:3000/characters")
-    .then((res) => res.json())
-    .then((data) => {
+    .then(res => res.json())
+    .then(data => {
       console.log(data.votes);
-
-      for (const character of data) {
+      data.forEach(character => {
         createCharacterButton(character, characterBar, detailedInfo, image);
-      }
+      });
     });
 }
 
@@ -32,43 +30,51 @@ function createCharacterButton(character, characterBar, detailedInfo, image) {
 }
 
 function setCharacterInfo(character, detailedInfo, image) {
-  document.querySelector("#name").textContent = character.name;
-  image.src = character.image;
-  document.querySelector("#vote-count").textContent = character.votes;
+  const nameElement = document.querySelector("#name");
+  const voteCountElement = document.querySelector("#vote-count");
+  const imageElement = image;
+
+  nameElement.textContent = character.name;
+  imageElement.src = character.image;
+  voteCountElement.textContent = character.votes;
   currentVotes = character.votes;
 }
 
-function attachVoteFormEvents() {
+function attachEventListeners() {
   const form = document.getElementById("votes-form");
-  const votecount = document.querySelector("#vote-count");
+  const resetBtn = document.querySelector("#reset-btn");
+  const voteCountElement = document.querySelector("#vote-count");
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", event => {
     event.preventDefault();
-    updateVoteCount(votecount, form);
+    const votesInput = document.querySelector("#votes");
+    const votes = parseInt(votesInput.value);
+    if (!isNaN(votes)) {
+      currentVotes += votes;
+      voteCountElement.textContent = currentVotes;
+      updateVoteCountOnServer(currentVotes);
+    }
+    form.reset();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    resetVoteCount();
+    resetVoteCountOnServer(currentVotes);
   });
 }
 
-function updateVoteCount(votecount, form) {
-  let votes = parseInt(document.querySelector("#votes").value);
-  if (isNaN(votes)) {
-    votes = 0;
-  }
-  currentVotes += votes;
-  votecount.innerHTML = currentVotes;
-  form.reset();
-
-  updateVoteCountOnServer(currentVotes);
+function resetVoteCount() {
+  currentVotes = 0;
+  const voteCountElement = document.querySelector("#vote-count");
+  voteCountElement.textContent = currentVotes;
 }
 
 function updateVoteCountOnServer(currentVotes) {
   const name = document.querySelector("#name").textContent;
-  
-
   if (typeof currentVotes !== "number" || currentVotes < 0) {
     console.error("Invalid input for currentVotes");
     return;
   }
-  
   fetch(`http://localhost:3000/characters?name=${name}`, {
     method: "PATCH",
     headers: {
@@ -83,31 +89,6 @@ function updateVoteCountOnServer(currentVotes) {
   })
   .catch(error => {
     console.error("Error updating vote count:", error);
-  });
-}
-
-
-function attachResetBtnEvents() {
-  const resetBtn = document.querySelector("#reset-btn");
-  resetBtn.addEventListener("click", () => {
-    resetVoteCount();
-    resetVoteCountOnServer();
-  });
-}
-
-function resetVoteCount() {
-  currentVotes = 0;
-  document.querySelector("#vote-count").innerHTML = currentVotes;
-}
-
-function resetVoteCountOnServer() {
-  const name = document.querySelector("#name").textContent;
-  fetch(`http://localhost:3000/characters?name=${name}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ votes: currentVotes }),
   });
 }
 
